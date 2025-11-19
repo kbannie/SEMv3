@@ -5,7 +5,7 @@ from numpy import random
 import cv2
 import numpy as np
 import pandas as pd 
-
+import os
 
 def evaluate(values):
     average_ratio = []
@@ -313,7 +313,8 @@ class Resize:
         
 
         if self.bool_training:
-            scale = self.img_size_dict[results['image_path']]
+            img_basename = os.path.basename(results['image_path'])
+            scale = self.img_size_dict[img_basename]
             scale = max(scale[0], self.min_size), max(scale[1], self.min_size)
         else:
             if results['image_path'] in self.img_size_dict.keys():
@@ -436,17 +437,23 @@ class Resize_iflytab:
         self.height_norm = height_norm
 
     def _random_scale(self, results):
-        img_sacle = results['img'].shape[:2][::-1]#w,h
+        img_sacle = results['img'].shape[:2][::-1]  # w,h
         
-
         if self.bool_training:
-            scale = self.img_size_dict[results['image_path']]
-            scale = max(scale[0], self.min_size), max(scale[1], self.min_size)
+            img_basename = os.path.basename(results['image_path'])
+            if img_basename in self.img_size_dict:
+                scale = self.img_size_dict[img_basename]
+                scale = max(scale[0], self.min_size), max(scale[1], self.min_size)
+            else:
+                # img_size_dict에 없으면 height 기반으로 계산
+                height = norm_by_height(results['img'])
+                height_ratio = self.height_norm / height 
+                scale = (int(img_sacle[0]*height_ratio), int(img_sacle[1]*height_ratio))
+                scale = max(scale[0], self.min_size), max(scale[1], self.min_size)
         else:
             if results['image_path'] in self.img_size_dict.keys():
                 scale = self.img_size_dict[results['image_path']]
                 scale = max(scale[0], self.min_size), max(scale[1], self.min_size)
-                # scale = (1000,1000)
             else:
                 height = norm_by_height(results['img'])
                 height_ratio = self.height_norm / height 

@@ -321,7 +321,7 @@ def pred_result_to_table_new_token(table, pred_result,cfg=None):
             col_center_points, col_segm_logits, \
                 mg_logits, num_rows, num_cols, table_gird_bboxes = pred_result
     
-    cells = parse_cells(layout, spans, row_center_points, row_segm_logits,¥
+    cells = parse_cells(layout, spans, row_center_points, row_segm_logits,\
         col_center_points, col_segm_logits, table_gird_bboxes)
     grids = list()
     for g in table_gird_bboxes.detach().cpu().numpy():

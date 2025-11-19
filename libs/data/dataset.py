@@ -2,7 +2,7 @@ import cv2
 import torch
 import numpy as np
 from .list_record_cache import ListRecordLoader
-
+import os
 
 class LRCRecordLoader:
     def __init__(self, lrc_path):
@@ -22,7 +22,8 @@ class LRCRecordLoader:
 
     def get_data(self, idx):
         table = self.loader.get_record(idx)
-        image_path = table['image_path'].replace("/work1/cv5/hhzhu2/2022/TSR/dataset","/train20/intern/permanent/cxqin/TSR/dataset/hhzhu_dataset/dataset")
+        filename = os.path.basename(table['image_path'])
+        image_path = os.path.join("/root/DMKD/DU/SEMv3/data/SciTSR/train/img", filename)
         image = cv2.imread(image_path)
         return image, table
 

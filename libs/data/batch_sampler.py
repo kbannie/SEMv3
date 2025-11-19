@@ -4,7 +4,7 @@ import random
 import numpy as np
 from libs.utils import logger
 from collections import defaultdict
-
+import os
 
 class BucketSampler:
     def __init__(self, dataset, img_size_dict, world_size, rank_id, fix_batch_size=None, max_pixel_nums=None, max_row_nums=None, max_col_nums=None, max_batch_size=8, min_batch_size=1, seps=(100, 100, 5, 5, 10), epoch=0):
@@ -28,7 +28,8 @@ class BucketSampler:
         infos = []
         for i in tqdm.tqdm(range(len(self.dataset))):
             info = self.dataset.get_info(i)
-            h, w = self.img_size_dict[info[0]]
+            img_name = os.path.basename(info[0])
+            h, w = self.img_size_dict[img_name]
             infos.append([ w, h, info[-3], info[-2], info[-1]])
         return infos
 

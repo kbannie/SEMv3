@@ -2,13 +2,13 @@ import torch
 from torch.utils.data.distributed import DistributedSampler
 
 from . import transform as T
-from . import transform_iflytab as T_i
+from . import transform as T_i
 from .dataset import LRCRecordLoader
 from .utils import random_sample_ratio
 from .batch_sampler import BucketSampler
 from .dataset import Dataset, collate_func
 from libs.utils.comm import distributed, get_rank, get_world_size
-
+import os
 
 
 def create_train_dataloader(lrcs_path, num_workers, max_batch_size, max_pixel_nums, max_row_nums, max_col_nums, bucket_seps, max_img_size, height_norm,rota=False, epoch=0, scale_bucket=[]):
@@ -20,15 +20,17 @@ def create_train_dataloader(lrcs_path, num_workers, max_batch_size, max_pixel_nu
         loader = LRCRecordLoader(lrc_path)
         loaders.append(loader)
         # line_list = [line.strip('\n') for line in open("/train20/intern/permanent/zrzhang6/qcxia/TSR/Dataset/TabRecSet_CurveTabSet/lrc/table.lrc_info.txt", 'r').readlines()]
-        line_list = [line.strip('\n') for line in open(lrc_path+'_info.txt', 'r').readlines()]
+        line_list = [line.strip('\n') for line in open('/root/DMKD/DU/SEMv3/data/lrc/train_v5.lrc_info.txt', 'r').readlines()]
         
-        for i, line in enumerate(line_list):
-            line = line.split('\t')
-            img_name, h, w, height_ave = '\t'.join(line[:-3]), int(line[-3]), int(line[-2]), int(line[-1])
-            h = int(h/height_ave*height_norm)
-            w = int(w/height_ave*height_norm)
+    for i, line in enumerate(line_list):
+        line = line.split('\t')
+        full_path, h, w, height_ave = '\t'.join(line[:-3]), int(line[-3]), int(line[-2]), int(line[-1])
+        img_name = os.path.basename(full_path)
+        h = int(h / height_ave * height_norm)
+        w = int(w / height_ave * height_norm)
+        img_size_dict[img_name] = random_sample_ratio((w, h), scale_bucket[epoch, i % 1000])
 
-            img_size_dict[img_name] = random_sample_ratio((w, h), scale_bucket[epoch, i%1000])
+
     if "WTW" in lrcs_path[0]:
         transforms = T.Compose([
             T.CallResizeImage(ratio_range=(0.8, 1.2), keep_ratio=True, bool_training=True, max_size=max_img_size, img_size_dict=img_size_dict),
@@ -69,9 +71,9 @@ def create_valid_dataloader(lrcs_path, num_workers, batch_size, max_img_size, he
         loader = LRCRecordLoader(lrc_path)
         loaders.append(loader)
         try:
-            line_list = [line.strip('\n') for line in open(lrc_path+'_info.txt', 'r').readlines()]
+            line_list = [line.strip('\n') for line in open("/root/DMKD/DU/SEMv3/data/lrc/val_v5.lrc_info.txt", 'r').readlines()]
         except:
-            line_list = [line.strip('\n') for line in open("/train20/intern/permanent/zrzhang6/qcxia/TSR/Dataset/companydataset/output_dir/extract_available/valid/valid.lrc_info.txt", 'r').readlines()]
+            line_list = [line.strip('\n') for line in open("/root/DMKD/DU/SEMv3/data/lrc/val_v5.lrc_info.txt", 'r').readlines()]
         for i, line in enumerate(line_list):
             line = line.split('\t')
             img_name, h, w, height_ave = '\t'.join(line[:-3]), int(line[-3]), int(line[-2]), int(line[-1])
@@ -117,4 +119,3 @@ def create_valid_dataloader(lrcs_path, num_workers, batch_size, max_img_size, he
             drop_last=False
         )
     return dataloader
-

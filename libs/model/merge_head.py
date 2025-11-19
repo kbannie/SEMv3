@@ -113,16 +113,49 @@ class MergeHead_new_token_v1(nn.Module):
             for batch_idx in range(segments_logits.size(0)):
                 # cal merge loss
                 index = torch.nonzero(masks[batch_idx])
-                end_col = index[-1][1]
-                end_row = index[-1][0]
+                
+                # Handle empty masks
+                if index.numel() == 0:
+                    # Skip empty batch or use default values
+                    batch_loss.append(torch.tensor(0.0, device=segments_logits.device))
+                    batch_center_loss.append(torch.tensor(0.0, device=segments_logits.device))
+                    continue
+                
+                end_col = index[-1][1].item()
+                end_row = index[-1][0].item()
+                
+                # Ensure valid dimensions
+                end_row = max(0, min(end_row, segments_logits.shape[2] - 1))
+                end_col = max(0, min(end_col, segments_logits.shape[3] - 1))
+                
+                # Check if dimensions are valid
+                if end_row < 0 or end_col < 0 or end_row >= segments_logits.shape[2] or end_col >= segments_logits.shape[3]:
+                    batch_loss.append(torch.tensor(0.0, device=segments_logits.device))
+                    batch_center_loss.append(torch.tensor(0.0, device=segments_logits.device))
+                    continue
+                
+                # Extract valid regions
+                pred_segment = segments_logits[batch_idx][:, :end_row+1, :end_col+1]  # (4, H, W)
+                target_segment = layouts[batch_idx][:end_row+1, :end_col+1].to(torch.long)  # (H, W)
+                
+                # Check if target is empty
+                if target_segment.numel() == 0:
+                    batch_loss.append(torch.tensor(0.0, device=segments_logits.device))
+                    batch_center_loss.append(torch.tensor(0.0, device=segments_logits.device))
+                    continue
+                
                 segments_loss = sigmoid_focal_loss_mutil(
-                    segments_logits[batch_idx][:, :end_row+1, :end_col+1], # (N, H, W)
-                    layouts[batch_idx][:end_row+1, :end_col+1].to(torch.long), # (N, H, W)
+                    pred_segment,
+                    target_segment,
                     reduction='none',
                 )
+                
+                center_pred_segment = center_pred[batch_idx][:, :end_row+1, :end_col+1]
+                layouts_center_segment = layouts_center[batch_idx][:end_row+1, :end_col+1].to(torch.long)
+                
                 segments_center_loss = sigmoid_focal_loss_mutil_2(
-                    center_pred[batch_idx][:, :end_row+1, :end_col+1], # (N, H, W)
-                    layouts_center[batch_idx][:end_row+1, :end_col+1].to(torch.long), # (N, H, W)
+                    center_pred_segment,
+                    layouts_center_segment,
                     reduction='none',
                 )
 
